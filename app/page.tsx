@@ -103,9 +103,20 @@ export default function Home() {
                 Yes, we require all users to complete our Know Your Customer (KYC) process. This helps us comply with regulations and ensure the security of our platform.
               </AccordionContent>
             </AccordionItem>
+            <AccordionItem value="item-6">
+              <AccordionTrigger>Is DEcFR safe?</AccordionTrigger>
+              <AccordionContent>
+                Yes, we require all users to complete our Know Your Customer (KYC) process. This helps us comply with regulations and ensure the security of our platform.
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </section>
       </main>
+      <footer>
+        <Link href="/terms">
+          <p className="text-center text-sm">Terms & Conditions</p>
+        </Link>
+      </footer>
     </div>
   );
 }

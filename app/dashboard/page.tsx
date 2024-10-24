@@ -1,18 +1,12 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ethers } from 'ethers';
-import { useToast } from "@/components/ui/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-// Import ABI and contract address
-import CryptoLoanABI from '@/contracts/CryptoLoan.json';
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
 export default function Dashboard() {
   const { user } = useUser();
@@ -22,134 +16,16 @@ export default function Dashboard() {
   const [loanAmount, setLoanAmount] = useState('');
   const [loanDuration, setLoanDuration] = useState('');
   const [collateralAmount, setCollateralAmount] = useState('');
-  const [loans, setLoans] = useState([]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    checkWalletConnection();
-  }, []);
-
-  async function checkWalletConnection() {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-          setWalletConnected(true);
-          setWalletAddress(accounts[0]);
-          const balance = await provider.getBalance(accounts[0]);
-          setEthBalance(ethers.utils.formatEther(balance));
-          fetchLoans(accounts[0], provider);
-        }
-      } catch (error) {
-        console.error("Failed to check wallet connection:", error);
-      }
-    }
-  }
+  const [loans] = useState<{ amount: string; collateral: string; duration: string; status: string; }[]>([]);
 
   async function connectWallet() {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        checkWalletConnection();
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-        toast({
-          title: "Wallet Connection Failed",
-          description: "Please make sure MetaMask is installed and try again.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "MetaMask Not Detected",
-        description: "Please install MetaMask to use this feature.",
-        variant: "destructive",
-      });
-    }
+    setWalletConnected(true);
+    setWalletAddress('0x1234...5678');
+    setEthBalance('1.5');
   }
 
   async function handleLoanRequest() {
-    if (!walletConnected) {
-      toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CryptoLoanABI.abi, signer);
-
-      const tx = await contract.requestLoan(
-        ethers.utils.parseEther(loanAmount),
-        ethers.utils.parseEther(collateralAmount),
-        loanDuration
-      );
-
-      await tx.wait();
-
-      toast({
-        title: "Loan Request Submitted",
-        description: `Requested $${loanAmount} for ${loanDuration} days with ${collateralAmount} ETH as collateral.`,
-      });
-
-      // Refresh loans
-      fetchLoans(walletAddress, provider);
-    } catch (error) {
-      console.error("Failed to request loan:", error);
-      toast({
-        title: "Loan Request Failed",
-        description: "An error occurred while processing your loan request.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function fetchLoans(address, provider) {
-    try {
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CryptoLoanABI.abi, provider);
-      const loanCount = await contract.getLoanCount(address);
-      const loanPromises = [];
-
-      for (let i = 0; i < loanCount; i++) {
-        loanPromises.push(contract.loans(address, i));
-      }
-
-      const loanResults = await Promise.all(loanPromises);
-      setLoans(loanResults);
-    } catch (error) {
-      console.error("Failed to fetch loans:", error);
-    }
-  }
-
-  async function handleRepayLoan(loanId) {
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CryptoLoanABI.abi, signer);
-
-      const tx = await contract.repayLoan(loanId);
-      await tx.wait();
-
-      toast({
-        title: "Loan Repaid",
-        description: "Your loan has been successfully repaid.",
-      });
-
-      // Refresh loans
-      fetchLoans(walletAddress, provider);
-    } catch (error) {
-      console.error("Failed to repay loan:", error);
-      toast({
-        title: "Loan Repayment Failed",
-        description: "An error occurred while processing your loan repayment.",
-        variant: "destructive",
-      });
-    }
+    console.log('Loan requested:', { loanAmount, loanDuration, collateralAmount });
   }
 
   if (!user) {
@@ -238,14 +114,14 @@ export default function Dashboard() {
             <TableBody>
               {loans.map((loan, index) => (
                 <TableRow key={index}>
-                  <TableCell>{ethers.utils.formatEther(loan.amount)} USD</TableCell>
-                  <TableCell>{ethers.utils.formatEther(loan.collateralAmount)} ETH</TableCell>
-                  <TableCell>{loan.duration.toString()} days</TableCell>
-                  <TableCell>{loan.active ? (loan.repaid ? 'Repaid' : 'Active') : 'Pending'}</TableCell>
+                  <TableCell>{loan.amount} USD</TableCell>
+                  <TableCell>{loan.collateral} ETH</TableCell>
+                  <TableCell>{loan.duration} days</TableCell>
+                  <TableCell>{loan.status}</TableCell>
                   <TableCell>
-                    {loan.active && !loan.repaid && (
-                      <Button onClick={() => handleRepayLoan(index)}>Repay</Button>
-                    )}
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
